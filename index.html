@@ -8,10 +8,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
 <style>
 /* VOICE: 店の給料係が使う、実務的で速い道具。
-   IDEA: 現金封筒に入れる前の支払い明細（ペイロール台帳）。
-   PICTURE: 右側の大きな総支払額と、人ごとの金額バー。
+   IDEA: 現金封筒に入れる前の支払い明細（ペイロール台帳）と、その裏の規定表（管理設定）。
+   PICTURE: 計算画面は大きな総支払額と人ごとの金額バー、管理画面は規定表そのもの。
    COLOUR and TYPE: 深い緑の帯（ドル札）、白い紙面、金額は札の緑、注意は黄。Zen Kaku Gothic New。
-   LAYOUT: 左に貼り付け・期間・単価、右に結果。600px未満で縦積み。 */
+   LAYOUT: 帯の下にタブ。計算は左に入力・右に結果、管理は2列の規定表。860px未満で縦積み。 */
 :root{color-scheme:light dark;
 --bg:light-dark(#eef2ee,#0b1411);--panel:light-dark(#ffffff,#13201b);--ink:light-dark(#111a16,#e8efe9);
 --mute:light-dark(#5b6a63,#93a59b);--line:light-dark(#d6dfd8,#24362e);--band:light-dark(#0f3d2e,#08261c);
@@ -21,49 +21,61 @@
 body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;overflow-x:clip}
 .top{background:var(--band);color:#eaf6ee;padding:clamp(22px,3vw,40px) max(5vw,16px) clamp(56px,6vw,84px)}
 .top h1{margin:0;font-size:clamp(30px,4.4vw,46px);line-height:1.05;font-weight:900;text-wrap:balance}
-.top p{margin:10px 0 0;color:#b9d6c5;max-width:62ch}
+.top p{margin:10px 0 18px;color:#b9d6c5;max-width:62ch}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs a{color:#d5ebde;text-decoration:none;font-weight:700;padding:10px 18px;border-radius:10px;border:1px solid #2f6a53;min-height:44px;display:inline-flex;align-items:center}
+.tabs a[aria-current=page]{background:#eaf6ee;color:#0f3d2e;border-color:#eaf6ee}
 .wrap{max-width:1240px;margin:calc(-1 * clamp(40px,5vw,64px)) auto 0;padding:0 max(3vw,12px) 48px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;align-items:start}
+.wrap[hidden]{display:none}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
 .col{display:grid;gap:18px}
 h2{font-size:18px;margin:0 0 4px;font-weight:700}
 .hint{color:var(--mute);font-size:14px;margin:0 0 12px}
 textarea,input,select{font:inherit;font-size:16px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:9px;padding:10px 12px;width:100%}
 textarea{min-height:240px;resize:vertical;line-height:1.45}
-input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid color-mix(in srgb,var(--cash) 55%,transparent);outline-offset:1px}
+input:focus,select:focus,textarea:focus,button:focus-visible,.tabs a:focus-visible{outline:3px solid color-mix(in srgb,var(--cash) 55%,transparent);outline-offset:1px}
 button{font:inherit;font-size:15px;font-weight:700;min-height:44px;padding:0 16px;border-radius:9px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer}
 button.pri{background:var(--cash);border-color:var(--cash);color:light-dark(#fff,#062012)}
+button.del{min-height:36px;padding:0 10px;font-size:13px;font-weight:500}
+button.danger{color:var(--warn)}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
-.f{display:grid;gap:4px;flex:1 1 150px}.f label{font-size:13px;color:var(--mute)}
+.f{display:grid;gap:4px;flex:1 1 150px}.f label{font-size:13px;color:var(--mute)}.f small{color:var(--mute);font-size:13px;min-height:1.2em}
 table{width:100%;border-collapse:collapse;font-size:15px}
 th{font-size:13px;color:var(--mute);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
 td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
 .num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-.rate{display:flex;align-items:center;gap:4px}.rate span{color:var(--mute)}.rate input{width:7.5em;text-align:right;padding:8px 10px}
-button.del{min-height:36px;padding:0 10px;font-size:13px;font-weight:500;margin-left:6px}
+.unit{display:flex;align-items:center;gap:4px}.unit span{color:var(--mute)}
+.unit input{text-align:right;padding:8px 10px}.w6{width:6.5em}.w10{width:10em}
 td select{padding:8px;font-size:15px;width:auto;max-width:9em}
+td input{padding:8px 10px}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
 .seg button{border:0;border-radius:0;background:transparent}.seg button[aria-pressed=true]{background:var(--cash);color:light-dark(#fff,#062012)}
 .total{background:var(--cashbg);border-radius:12px;padding:18px 18px 14px;margin:14px 0 16px}
-.total small{color:var(--mute);font-size:14px}
+.total small{color:var(--mute);font-size:14px;display:block}
 .total b{display:block;font-size:clamp(40px,6vw,64px);line-height:1.05;color:var(--cash);font-variant-numeric:tabular-nums;font-weight:900;letter-spacing:-.01em}
+.sum{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:14px;color:var(--mute);border:1px dashed var(--line);border-radius:10px;padding:10px 12px;margin-top:12px}
+.sum b{color:var(--ink);font-weight:700}.sum a{color:var(--cash);font-weight:700}
 .people{display:grid;gap:10px}
 .p{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:11px}
 .p.off{opacity:.45}
-.p input{width:22px;height:22px;accent-color:var(--cash)}
+.p input[type=checkbox]{width:22px;height:22px;accent-color:var(--cash)}
 .p .nm{font-weight:700;overflow-wrap:anywhere}
 .p .amt{font-weight:900;font-size:20px;color:var(--cash);font-variant-numeric:tabular-nums;white-space:nowrap}
 .p .bar{grid-column:2/4;height:8px;background:var(--line);border-radius:5px;overflow:hidden}
 .p .bar i{display:block;height:100%;background:var(--cash);border-radius:5px;transition:width .3s}
 .p .det{grid-column:2/4;font-size:13px;color:var(--mute)}
+.p .det select{width:auto;padding:4px 8px;font-size:14px;margin-left:4px}
+.rtag{display:inline-block;font-size:12px;font-weight:700;padding:1px 7px;border-radius:6px;background:var(--warnbg);color:var(--warn);margin-left:6px;vertical-align:2px;white-space:nowrap}
 .warn{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px;margin-top:12px}
 .empty{color:var(--mute);padding:20px 0;text-align:center}
 details summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
 .log td{font-size:14px}.tag{font-size:12px;padding:2px 7px;border-radius:6px;background:var(--warnbg);color:var(--warn);white-space:nowrap}
 .ok{background:var(--cashbg);color:var(--cash)}
 .scroll{overflow-x:auto}
-.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:5}
 .toast.on{opacity:1}
 .full{grid-column:1/-1}
+#cfgCode{min-height:90px;font-size:13px;font-family:ui-monospace,Consolas,monospace}
 @media(max-width:860px){.wrap{grid-template-columns:minmax(0,1fr)}.res{order:-1}}
 @media(max-width:600px){table{font-size:13px}.card{padding:16px}}
 @media(prefers-reduced-motion:reduce){.p .bar i{transition:none}}
@@ -72,10 +84,15 @@ details summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;alig
 <body>
 <header class="top">
   <h1>納品ボーナス計算機</h1>
-  <p>Discordの納品報告をそのまま貼り付けて、品目ごとの単価を入れるだけ。納品者ごとの合計数とボーナス額（$）を出します。</p>
+  <p>Discordの納品報告を貼り付けるだけで、役職の基準額と納品の割合からボーナス（$）を出します。</p>
+  <nav class="tabs" aria-label="画面切り替え">
+    <a href="#calc" id="tabCalc">計算</a>
+    <a href="#admin" id="tabAdmin">管理設定</a>
+  </nav>
 </header>
 
-<main class="wrap">
+<!-- ===== 計算画面 ===== -->
+<main class="wrap" id="viewCalc">
   <div class="col">
     <section class="card">
       <h2>1. 納品報告を貼り付け</h2>
@@ -86,7 +103,6 @@ details summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;alig
         <span class="hint" id="srcInfo" style="margin:0"></span>
       </div>
     </section>
-
     <section class="card">
       <h2>2. 集計期間</h2>
       <p class="hint">「昨日 10:07」「1:07」のような相対表示は、基準日（コピーした日）から日付を割り出します。期間は空欄なら全件対象。</p>
@@ -96,33 +112,11 @@ details summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;alig
         <div class="f"><label for="to">終了</label><input type="datetime-local" id="to"></div>
       </div>
     </section>
-
-    <section class="card">
-      <h2>3. 支払いレート</h2>
-      <p class="hint">1個あたりの単価（$）。表記ゆれ（例：生乳と牛乳）は「まとめ先」で合算できます。入力内容はこのブラウザに保存されます。</p>
-      <div class="scroll"><table id="rates"><thead><tr><th>品目</th><th class="num">合計数</th><th>単価</th><th>まとめ先</th><th class="num">小計</th></tr></thead><tbody></tbody></table></div>
-      <form class="row" id="addForm" style="margin-top:12px">
-        <div class="f"><label for="newName">品目を追加</label><input id="newName" placeholder="例 たまご" autocomplete="off"></div>
-        <div class="f" style="flex:0 1 9em"><label for="newRate">単価（$）</label><input id="newRate" inputmode="decimal" placeholder="0"></div>
-        <button type="submit">追加</button>
-      </form>
-    </section>
   </div>
 
   <section class="card res">
-    <div class="row" style="justify-content:space-between">
-      <h2>ボーナス支払い明細</h2>
-      <div class="seg" role="group" aria-label="計算方式">
-        <button type="button" id="mRate" aria-pressed="true">単価方式</button>
-        <button type="button" id="mPool" aria-pressed="false">予算按分</button>
-      </div>
-    </div>
-    <div class="row" style="margin-top:12px">
-      <div class="f" id="poolBox" hidden><label for="pool">ボーナス予算（$）</label><input id="pool" inputmode="numeric" placeholder="例 1000000"></div>
-      <div class="f"><label for="round">端数処理（切り捨て）</label>
-        <select id="round"><option value="1">$1単位</option><option value="10">$10単位</option><option value="100">$100単位</option><option value="1000">$1,000単位</option></select></div>
-    </div>
-    <p class="hint" id="modeHint" style="margin:8px 0 0"></p>
+    <h2>ボーナス支払い明細</h2>
+    <div class="sum" id="cfgSum"></div>
     <div class="total"><small>総支払額</small><b id="total">$0</b><small id="totalSub"></small></div>
     <div class="people" id="people"></div>
     <div class="row" style="margin-top:14px">
@@ -133,11 +127,62 @@ details summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;alig
   </section>
 
   <section class="card full">
-    <details id="logBox">
+    <details>
       <summary>読み取りログ（各メッセージの解釈を確認）</summary>
       <div class="scroll"><table class="log"><thead><tr><th>日時</th><th>投稿者</th><th>内容</th><th>読み取り結果</th></tr></thead><tbody id="log"></tbody></table></div>
     </details>
   </section>
+</main>
+
+<!-- ===== 管理設定画面 ===== -->
+<main class="wrap" id="viewAdmin" hidden>
+  <div class="col">
+    <section class="card">
+      <h2>予算と計算方式</h2>
+      <p class="hint" id="modeHint"></p>
+      <div class="seg" role="group" aria-label="計算方式" style="margin-bottom:12px">
+        <button type="button" id="mPool" aria-pressed="true">予算按分</button>
+        <button type="button" id="mRate" aria-pressed="false">単価方式</button>
+      </div>
+      <div class="row">
+        <div class="f" id="poolBox"><label for="pool">ボーナス予算（$）</label><input id="pool" inputmode="numeric"><small id="poolJp"></small></div>
+        <div class="f" id="unitBox" hidden><label for="unit">倍率1あたりの単価（$）</label><input id="unit" inputmode="decimal"><small id="unitJp"></small></div>
+        <div class="f"><label for="round">端数処理（切り捨て）</label>
+          <select id="round"><option value="1">$1単位</option><option value="10">$10単位</option><option value="100">$100単位</option><option value="1000">$1,000単位</option><option value="10000">$1万単位</option></select><small></small></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>役職と基準額</h2>
+      <p class="hint">役職者には基準額を先に支払います。Discordの名前に「名前に含む文字」が入っている人は自動でその役職になります（例：「リッカリン/副店長」→副店長）。個別の変更は計算画面の明細からできます。</p>
+      <div class="scroll"><table id="roles"><thead><tr><th>役職名</th><th>名前に含む文字</th><th>基準額</th><th></th></tr></thead><tbody></tbody></table></div>
+      <div class="row" style="margin-top:12px"><button type="button" id="addRole">役職を追加</button></div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="card">
+      <h2>品目倍率</h2>
+      <p class="hint">按分のときの品目ごとの重みです。×1が基準で、×1.5なら1個を1.5個分として数えます。一覧にない品目は×1。表記ゆれ（例：生乳と牛乳）は「まとめ先」で合算できます。</p>
+      <div class="scroll"><table id="items"><thead><tr><th>品目</th><th class="num">今回の数</th><th>倍率</th><th>まとめ先</th><th></th></tr></thead><tbody></tbody></table></div>
+      <form class="row" id="addForm" style="margin-top:12px">
+        <div class="f"><label for="newName">品目を追加</label><input id="newName" placeholder="例 たまご" autocomplete="off"></div>
+        <div class="f" style="flex:0 1 8em"><label for="newMult">倍率</label><input id="newMult" inputmode="decimal" placeholder="1"></div>
+        <button type="submit">追加</button>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>設定の書き出し・読み込み</h2>
+      <p class="hint">設定はこのブラウザに保存されます。別のPCや他の管理者と同じ設定を使うときは、書き出したコードを相手の「読み込み」に貼り付けてください。</p>
+      <textarea id="cfgCode" spellcheck="false" aria-label="設定コード" placeholder="ここに設定コードを貼り付けて「読み込み」"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button type="button" id="cfgExport" class="pri">書き出してコピー</button>
+        <button type="button" id="cfgImport">読み込み</button>
+        <button type="button" id="cfgReset" class="danger">初期設定に戻す</button>
+      </div>
+    </section>
+  </div>
 </main>
 <div class="toast" id="toast" role="status"></div>
 
@@ -217,6 +262,9 @@ function parse(text, base) {
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => '$' + Math.round(n).toLocaleString('en-US');
+const jp = n => { n = Math.round(n); if (n < 10000) return n.toLocaleString(); const oku = Math.floor(n / 1e8), man = Math.floor(n % 1e8 / 1e4), r = n % 1e4;
+  return (oku ? oku.toLocaleString() + '億' : '') + (man ? man.toLocaleString() + '万' : '') + (r ? r.toLocaleString() : ''); };
+const num = v => parseFloat(String(v ?? '').replace(/[^\d.]/g, '')) || 0;
 const fmtD = d => d ? `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : '—';
 const store = {
   get(k, d) { try { const v = localStorage.getItem('bonuscalc:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
@@ -258,93 +306,120 @@ const SAMPLE = `1. 店長 暁月エム [交錯員],  — 2026/11/22 21:23
 生乳２４０
 かぼちゃ２１３`;
 
-let rates = store.get('rates', {});
-let alias = store.get('alias', {});
-let manual = store.get('manual', []);
+const DEFAULT_CFG = () => ({
+  mode: 'pool', pool: '200000000', unit: '1000', round: '1',
+  mult: {}, alias: {}, manual: [], assign: {},
+  roles: [
+    { id: 'r1', name: '店長', kw: '店長', fixed: '25000000' },
+    { id: 'r2', name: '副店長', kw: '副店長', fixed: '20000000' },
+    { id: 'r3', name: 'チーフ', kw: 'チーフ', fixed: '15000000' }]
+});
+
+// 設定の読み込み（旧バージョンの保存内容を引き継ぐ）
+let cfg = store.get('cfg', null);
+if (!cfg) {
+  cfg = DEFAULT_CFG();
+  const oldRoles = store.get('roles', null);
+  if (oldRoles) cfg.roles = oldRoles.map(r => ({ id: r.id, name: r.name, kw: r.kw, fixed: r.fixed }));
+  cfg.alias = store.get('alias', {}); cfg.manual = store.get('manual', []); cfg.assign = store.get('assign', {});
+  cfg.pool = store.get('pool', '') || cfg.pool; cfg.round = store.get('round', '1');
+}
+cfg = Object.assign(DEFAULT_CFG(), cfg);
 let excluded = new Set(store.get('excluded', []));
-let mode = store.get('mode', 'rate');
 const firstRun = store.get('src', null) == null;
 $('src').value = store.get('src', SAMPLE);
-if (firstRun) { rates = { '牛乳': 100, '生乳': 100, 'かぼちゃ': 150, '生肉': 80, '小麦': 60 }; rates = Object.fromEntries(Object.entries(rates).map(([k, v]) => [itemKey(k), v])); }
 $('base').value = store.get('base', '') || (firstRun ? '2026-11-24' : new Date().toLocaleDateString('sv-SE'));
 $('from').value = store.get('from', ''); $('to').value = store.get('to', '');
-$('pool').value = store.get('pool', ''); $('round').value = store.get('round', '1');
 
-let lastRows = [], lastItems = [], lastTotal = 0;
+const saveCfg = () => store.set('cfg', cfg);
+const saveCalc = () => { store.set('src', $('src').value); store.set('excluded', [...excluded]); for (const k of ['base', 'from', 'to']) store.set(k, $(k).value); };
 
-function compute() {
+const resolve = k => { const seen = new Set(); while (cfg.alias[k] && !seen.has(k)) { seen.add(k); k = cfg.alias[k]; } return k; };
+const multOf = k => { const v = cfg.mult[k]; return v === undefined || v === '' ? 1 : num(v); };
+function roleOf(name) {
+  const a = cfg.assign[name];
+  if (a === 'none') return null;
+  if (a) { const r = cfg.roles.find(r => r.id === a); if (r) return r; }
+  const n = name.normalize('NFKC');
+  return [...cfg.roles].filter(r => r.kw && r.kw.trim()).sort((x, y) => y.kw.length - x.kw.length)
+    .find(r => n.includes(r.kw.normalize('NFKC').trim())) || null;
+}
+
+let S = {}; // 直近の集計結果
+
+function analyse() {
   const bd = $('base').value ? new Date($('base').value + 'T00:00') : new Date();
   const msgs = parse($('src').value, bd);
   const from = $('from').value ? new Date($('from').value) : null, to = $('to').value ? new Date($('to').value) : null;
-  const inRange = m => !m.time ? !(from || to) : (!from || m.time >= from) && (!to || m.time <= to);
   const display = {}, totals = {}, people = new Map();
-  const resolve = k => { let s = new Set(); while (alias[k] && !s.has(k)) { s.add(k); k = alias[k]; } return k; };
-  for (const n of manual) display[itemKey(n)] = n;
+  for (const n of cfg.manual) display[itemKey(n)] = n;
   for (const m of msgs) for (const it of m.items) if (!display[it.key]) display[it.key] = it.name;
   let outCount = 0;
   for (const m of msgs) {
-    m.in = inRange(m);
+    m.in = !m.time ? !(from || to) : (!from || m.time >= from) && (!to || m.time <= to);
     if (!m.in) { outCount++; continue; }
     for (const it of m.items) {
-      const k = resolve(it.key);
       totals[it.key] = (totals[it.key] || 0) + it.qty;
+      const k = resolve(it.key);
       if (!people.has(m.author)) people.set(m.author, {});
       const p = people.get(m.author); p[k] = (p[k] || 0) + it.qty;
     }
   }
-  const keys = Object.keys(display);
-  const mergedTotals = {};
-  for (const k of keys) { const r = resolve(k); mergedTotals[r] = (mergedTotals[r] || 0) + (totals[k] || 0); }
-  const rateOf = k => +rates[k] || 0;
-  const step = +$('round').value || 1, fl = n => Math.floor(n / step) * step;
+  return { msgs, display, totals, people, outCount };
+}
 
-  let rows = [...people].map(([name, items]) => ({ name, items, on: !excluded.has(name),
-    weight: Object.entries(items).reduce((s, [k, q]) => s + q * rateOf(k), 0),
-    qty: Object.values(items).reduce((a, b) => a + b, 0) }));
-  const pool = +String($('pool').value).replace(/[^\d.]/g, '') || 0;
-  if (mode === 'pool') {
-    const useQty = rows.every(r => r.weight === 0);
-    const W = rows.filter(r => r.on).reduce((s, r) => s + (useQty ? r.qty : r.weight), 0);
-    rows.forEach(r => r.amt = r.on && W ? fl(pool * (useQty ? r.qty : r.weight) / W) : 0);
-    $('modeHint').textContent = useQty ? '単価が未設定のため、納品数の比率で予算を分けています。' : '「数 × 単価」を重みとして、予算を比率で分けています。';
+function compute() {
+  const A = analyse();
+  const { msgs, display, people, outCount } = A;
+  const step = num(cfg.round) || 1, fl = n => Math.floor(n / step) * step;
+  const pool = num(cfg.pool), unit = num(cfg.unit);
+  let rows = [...people].map(([name, items]) => {
+    const role = roleOf(name);
+    return { name, items, role, on: !excluded.has(name), fixed: role ? num(role.fixed) : 0,
+      qty: Object.values(items).reduce((a, b) => a + b, 0),
+      pts: Object.entries(items).reduce((s, [k, q]) => s + q * multOf(k), 0) };
+  });
+  const on = rows.filter(r => r.on);
+  const fixedSum = on.reduce((s, r) => s + r.fixed, 0);
+  let rest = 0;
+  if (cfg.mode === 'pool') {
+    const useQty = on.every(r => r.pts === 0);
+    const base = r => useQty ? r.qty : r.pts;
+    const W = on.reduce((s, r) => s + base(r), 0);
+    rest = Math.max(0, pool - fixedSum);
+    rows.forEach(r => { r.share = r.on && W ? rest * base(r) / W : 0; r.amt = r.on ? fl(r.fixed + r.share) : 0; });
   } else {
-    rows.forEach(r => r.amt = r.on ? fl(r.weight) : 0);
-    $('modeHint').textContent = '各自の「納品数 × 単価」の合計を支払います。';
+    rows.forEach(r => { r.share = r.on ? r.pts * unit : 0; r.amt = r.on ? fl(r.fixed + r.share) : 0; });
   }
   rows.sort((a, b) => b.amt - a.amt || b.qty - a.qty);
   const total = rows.reduce((s, r) => s + r.amt, 0);
+  S = { ...A, rows, total, fixedSum, rest, pool };
+  renderCalc();
+}
+
+function renderCalc() {
+  const { rows, total, display, msgs, outCount, fixedSum, rest, pool } = S;
   const max = Math.max(1, ...rows.map(r => r.amt));
-  lastRows = rows; lastTotal = total;
-
-  // rate table
-  const roots = keys.filter(k => resolve(k) === k);
-  lastItems = roots.map(k => ({ k, name: display[k] }));
-  $('rates').tBodies[0].innerHTML = keys.length ? keys.map(k => {
-    const merged = resolve(k) !== k;
-    const opts = ['<option value="">そのまま</option>'].concat(keys.filter(o => o !== k && resolve(o) !== k).map(o => `<option value="${esc(o)}"${alias[k] === o ? ' selected' : ''}>→ ${esc(display[o])}</option>`)).join('');
-    const isManual = manual.some(n => itemKey(n) === k);
-    return `<tr><td><b>${esc(display[k])}</b>${isManual ? `<button type="button" class="del" data-del="${esc(k)}" aria-label="${esc(display[k])}を一覧から外す">外す</button>` : ''}</td><td class="num">${(totals[k] || 0).toLocaleString()}${merged ? '' : mergedTotals[k] !== (totals[k] || 0) ? `<br><small style="color:var(--mute)">合算 ${mergedTotals[k].toLocaleString()}</small>` : ''}</td>
-      <td>${merged ? `<span class="hint">${esc(display[resolve(k)])}の単価</span>` : `<div class="rate"><span>$</span><input data-rate="${esc(k)}" inputmode="decimal" value="${esc(rates[k] ?? '')}" placeholder="0" aria-label="${esc(display[k])}の単価"></div>`}</td>
-      <td><select data-alias="${esc(k)}" aria-label="${esc(display[k])}のまとめ先">${opts}</select></td>
-      <td class="num">${merged ? '' : money((mergedTotals[k] || 0) * rateOf(k))}</td></tr>`;
-  }).join('') : '<tr><td colspan="5" class="empty">品目がまだ読み取れていません</td></tr>';
-
-  // people
+  const roleOpts = r => `<option value="">自動${!cfg.assign[r.name] && r.role ? '（' + esc(r.role.name) + '）' : ''}</option><option value="none"${cfg.assign[r.name] === 'none' ? ' selected' : ''}>なし</option>` +
+    cfg.roles.map(o => `<option value="${esc(o.id)}"${cfg.assign[r.name] === o.id ? ' selected' : ''}>${esc(o.name || '(無名)')}</option>`).join('');
   $('people').innerHTML = rows.length ? rows.map((r, i) => `<div class="p${r.on ? '' : ' off'}">
       <input type="checkbox" data-p="${i}" ${r.on ? 'checked' : ''} aria-label="${esc(r.name)}を支払い対象にする">
-      <span class="nm">${esc(r.name)}</span><span class="amt">${money(r.amt)}</span>
+      <span class="nm">${esc(r.name)}${r.role ? `<span class="rtag">${esc(r.role.name)}</span>` : ''}</span><span class="amt">${money(r.amt)}</span>
       <span class="bar"><i style="width:${(r.amt / max * 100).toFixed(1)}%"></i></span>
-      <span class="det">${Object.entries(r.items).map(([k, q]) => `${esc(display[k])} ${q.toLocaleString()}`).join(' ・ ')}　計${r.qty.toLocaleString()}個</span></div>`).join('')
+      <span class="det">${r.role && r.on ? `基準額 ${jp(r.fixed)} ＋ 納品分 ${jp(r.amt - r.fixed)}　` : ''}${Object.entries(r.items).map(([k, q]) => `${esc(display[k] || k)} ${q.toLocaleString()}`).join(' ・ ')}　計${r.qty.toLocaleString()}個<br>役職<select data-role="${i}" aria-label="${esc(r.name)}の役職">${roleOpts(r)}</select></span></div>`).join('')
     : '<div class="empty">納品報告を貼り付けると、ここに支払額が出ます。</div>';
   $('total').textContent = money(total);
   const paid = rows.filter(r => r.on && r.amt > 0).length;
-  $('totalSub').textContent = `${paid}人に支払い` + (mode === 'pool' && pool ? `／予算 ${money(pool)}（残り ${money(pool - total)}）` : '');
+  $('totalSub').textContent = `${paid}人に支払い（${jp(total)}ドル）` + (cfg.mode === 'pool' && pool ? `／端数の残り ${money(pool - total)}` : '');
+  const multSet = Object.entries(cfg.mult).filter(([k, v]) => v !== '' && multOf(k) !== 1).map(([k, v]) => `${display[k] || k}×${multOf(k)}`);
+  $('cfgSum').innerHTML = (cfg.mode === 'pool'
+    ? `<span>予算 <b>${esc(jp(pool))}</b></span><span>役職基準額 <b>${esc(jp(fixedSum))}</b></span><span>按分 <b>${esc(jp(rest))}</b></span>`
+    : `<span>単価方式 <b>倍率1あたり ${esc(money(num(cfg.unit)))}</b></span><span>役職基準額 <b>${esc(jp(fixedSum))}</b></span>`)
+    + `<span>品目倍率 <b>${multSet.length ? esc(multSet.join('、')) : 'すべて×1'}</b></span><a href="#admin">管理設定で変更</a>`;
 
-  // warnings + log
-  const unrated = roots.filter(k => !rateOf(k) && mergedTotals[k]);
-  const skippedNum = msgs.filter(m => m.in).flatMap(m => m.skipped.filter(l => /\d/.test(l)).map(l => `${m.author}：「${l}」`));
   const w = [];
-  if (mode === 'rate' && unrated.length) w.push(`単価が未入力の品目：${unrated.map(k => esc(display[k])).join('、')}`);
+  if (cfg.mode === 'pool' && fixedSum > pool) w.push('役職の基準額の合計が予算を超えています。管理設定で予算か基準額を見直してください。');
+  const skippedNum = msgs.filter(m => m.in).flatMap(m => m.skipped.filter(l => /\d/.test(l)).map(l => `${m.author}：「${l}」`));
   if (skippedNum.length) w.push(`数字を含むのに品目として読めなかった行：${skippedNum.map(esc).join(' / ')}`);
   if (outCount) w.push(`期間外のため除外したメッセージ：${outCount}件`);
   $('warns').innerHTML = w.map(t => `<div class="warn">${t}</div>`).join('');
@@ -353,71 +428,138 @@ function compute() {
     <td>${!m.in ? '<span class="tag">期間外</span> ' : ''}${m.items.map(it => `<span class="tag ok">${esc(it.name)} ${it.qty}</span>`).join(' ')}${m.skipped.length ? ` <span class="tag">無視 ${m.skipped.length}行</span>` : ''}</td></tr>`).join('');
 }
 
-function save() {
-  store.set('src', $('src').value); store.set('rates', rates); store.set('alias', alias); store.set('manual', manual);
-  store.set('excluded', [...excluded]); store.set('mode', mode);
-  for (const k of ['base', 'from', 'to', 'pool', 'round']) store.set(k, $(k).value);
+// ---------- 管理画面 ----------
+function renderAdmin() {
+  const { display, totals } = S.display ? S : analyse();
+  const pool = cfg.mode === 'pool';
+  $('mPool').setAttribute('aria-pressed', pool); $('mRate').setAttribute('aria-pressed', !pool);
+  $('poolBox').hidden = !pool; $('unitBox').hidden = pool;
+  $('modeHint').textContent = pool
+    ? '予算按分：予算から役職の基準額を先に差し引き、残りを全員の「納品数 × 品目倍率」の比率で分けます。'
+    : '単価方式：各自の「納品数 × 品目倍率 × 単価」に、役職の基準額を足して支払います（予算は使いません）。';
+  $('pool').value = cfg.pool; $('unit').value = cfg.unit; $('round').value = cfg.round;
+  updateJp();
+  const keys = Object.keys(display);
+  $('items').tBodies[0].innerHTML = keys.length ? keys.map(k => {
+    const merged = resolve(k) !== k, isManual = cfg.manual.some(n => itemKey(n) === k);
+    const opts = ['<option value="">そのまま</option>'].concat(keys.filter(o => o !== k && resolve(o) !== k)
+      .map(o => `<option value="${esc(o)}"${cfg.alias[k] === o ? ' selected' : ''}>→ ${esc(display[o])}</option>`)).join('');
+    return `<tr><td><b>${esc(display[k])}</b></td><td class="num">${(totals[k] || 0).toLocaleString()}</td>
+      <td>${merged ? `<span class="hint">${esc(display[resolve(k)])}と同じ</span>` : `<div class="unit"><span>×</span><input class="w6" data-mult="${esc(k)}" inputmode="decimal" value="${esc(cfg.mult[k] ?? '')}" placeholder="1" aria-label="${esc(display[k])}の倍率"></div>`}</td>
+      <td><select data-alias="${esc(k)}" aria-label="${esc(display[k])}のまとめ先">${opts}</select></td>
+      <td>${isManual ? `<button type="button" class="del" data-idel="${esc(k)}">外す</button>` : ''}</td></tr>`;
+  }).join('') : '<tr><td colspan="5" class="empty">品目がまだありません。報告を貼り付けるか、下から追加してください。</td></tr>';
+  $('roles').tBodies[0].innerHTML = cfg.roles.length ? cfg.roles.map(r => `<tr>
+    <td><input data-rf="name" data-id="${esc(r.id)}" value="${esc(r.name)}" aria-label="役職名"></td>
+    <td><input data-rf="kw" data-id="${esc(r.id)}" value="${esc(r.kw)}" placeholder="空欄なら手動のみ" aria-label="名前に含む文字"></td>
+    <td><div class="unit"><span>$</span><input class="w10" data-rf="fixed" data-id="${esc(r.id)}" value="${esc(r.fixed)}" inputmode="numeric" aria-label="基準額"></div><small class="hint" data-jp="${esc(r.id)}">${esc(jp(num(r.fixed)))}</small></td>
+    <td><button type="button" class="del" data-rdel="${esc(r.id)}">削除</button></td></tr>`).join('')
+    : '<tr><td colspan="4" class="empty">役職がありません</td></tr>';
 }
-let t;
-const update = () => { clearTimeout(t); t = setTimeout(() => { compute(); save(); }, 120); };
+function updateJp() {
+  $('poolJp').textContent = num(cfg.pool) ? `＝ ${jp(num(cfg.pool))}ドル` : '';
+  $('unitJp').textContent = num(cfg.unit) ? `＝ ${jp(num(cfg.unit))}ドル` : '';
+}
 
-function setMode(m) {
-  mode = m; $('mRate').setAttribute('aria-pressed', m === 'rate'); $('mPool').setAttribute('aria-pressed', m === 'pool');
-  $('poolBox').hidden = m !== 'pool'; compute(); save();
+// ---------- 画面切り替え ----------
+function route() {
+  const admin = location.hash === '#admin';
+  $('viewCalc').hidden = admin; $('viewAdmin').hidden = !admin;
+  $('tabCalc').toggleAttribute('aria-current', !admin); $('tabAdmin').toggleAttribute('aria-current', admin);
+  if (admin) { $('tabAdmin').setAttribute('aria-current', 'page'); renderAdmin(); } else { $('tabCalc').setAttribute('aria-current', 'page'); compute(); }
 }
-const toast = msg => { const el = $('toast'); el.textContent = msg; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 1600); };
+window.addEventListener('hashchange', route);
+
+// ---------- イベント（計算画面） ----------
+let t;
+const later = (fn, ms = 150) => { clearTimeout(t); t = setTimeout(fn, ms); };
+const toast = msg => { const el = $('toast'); el.textContent = msg; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 1800); };
 async function copy(text) {
   try { await navigator.clipboard.writeText(text); toast('コピーしました'); }
   catch { const ta = document.createElement('textarea'); ta.value = text; document.body.append(ta); ta.select();
     try { document.execCommand('copy'); toast('コピーしました'); } catch { toast('コピーできませんでした'); } ta.remove(); }
 }
-const period = () => ($('from').value || $('to').value) ? `${$('from').value.replace('T', ' ') || '最初'} 〜 ${$('to').value.replace('T', ' ') || '最後'}` : '全期間';
-
-$('src').addEventListener('input', update);
-for (const id of ['base', 'from', 'to', 'pool', 'round']) $(id).addEventListener('input', update);
-$('clear').addEventListener('click', () => { $('src').value = ''; compute(); save(); $('src').focus(); });
-$('mRate').addEventListener('click', () => setMode('rate'));
-$('mPool').addEventListener('click', () => setMode('pool'));
-$('rates').addEventListener('input', e => {
-  const k = e.target.dataset.rate; if (k == null) return;
-  rates[k] = e.target.value.replace(/[^\d.]/g, ''); clearTimeout(t);
-  t = setTimeout(() => { const id = e.target.dataset.rate; compute(); save(); const el = document.querySelector(`[data-rate="${CSS.escape(id)}"]`); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 400);
+for (const id of ['src', 'base', 'from', 'to']) $(id).addEventListener('input', () => later(() => { compute(); saveCalc(); }));
+$('clear').addEventListener('click', () => { $('src').value = ''; compute(); saveCalc(); $('src').focus(); });
+$('people').addEventListener('change', e => {
+  const d = e.target.dataset;
+  if (d.p != null) { const r = S.rows[d.p]; if (!r) return; if (e.target.checked) excluded.delete(r.name); else excluded.add(r.name); saveCalc(); }
+  else if (d.role != null) { const r = S.rows[d.role]; if (!r) return; if (e.target.value) cfg.assign[r.name] = e.target.value; else delete cfg.assign[r.name]; saveCfg(); }
+  else return;
+  compute();
 });
-$('rates').addEventListener('change', e => {
+const period = () => ($('from').value || $('to').value) ? `${$('from').value.replace('T', ' ') || '最初'} 〜 ${$('to').value.replace('T', ' ') || '最後'}` : '全期間';
+$('copy').addEventListener('click', () => {
+  const lines = S.rows.filter(r => r.on && r.amt > 0).map(r => `・${r.name}${r.role ? `［${r.role.name}］` : ''}：**${money(r.amt)}**（${r.role ? `基準額${jp(r.fixed)}＋` : ''}${Object.entries(r.items).map(([k, q]) => `${S.display[k] || k}${q}`).join(' / ')}）`);
+  copy(`【納品ボーナス】${period()}\n${lines.join('\n')}\n合計：${money(S.total)}`);
+});
+$('copyCsv').addEventListener('click', () => {
+  const ks = [...new Set(S.rows.flatMap(r => Object.keys(r.items)))];
+  const head = ['名前', '役職', '基準額', ...ks.map(k => S.display[k] || k), '合計数', 'ボーナス($)'];
+  const q = s => /[",\n]/.test(s) ? `"${String(s).replace(/"/g, '""')}"` : s;
+  const body = S.rows.map(r => [r.name, r.role ? r.role.name : '', r.on ? r.fixed : 0, ...ks.map(k => r.items[k] || 0), r.qty, r.amt].map(q).join(','));
+  copy([head.join(','), ...body].join('\n'));
+});
+
+// ---------- イベント（管理画面） ----------
+const setMode = m => { cfg.mode = m; saveCfg(); renderAdmin(); };
+$('mPool').addEventListener('click', () => setMode('pool'));
+$('mRate').addEventListener('click', () => setMode('rate'));
+for (const id of ['pool', 'unit']) $(id).addEventListener('input', e => { cfg[id] = e.target.value.replace(/[^\d.]/g, ''); updateJp(); saveCfg(); });
+$('round').addEventListener('change', e => { cfg.round = e.target.value; saveCfg(); });
+$('items').addEventListener('input', e => { const k = e.target.dataset.mult; if (k == null) return; cfg.mult[k] = e.target.value.replace(/[^\d.]/g, ''); saveCfg(); });
+$('items').addEventListener('change', e => {
   const k = e.target.dataset.alias; if (k == null) return;
-  if (e.target.value) alias[k] = e.target.value; else delete alias[k];
-  compute(); save();
+  if (e.target.value) cfg.alias[k] = e.target.value; else delete cfg.alias[k];
+  saveCfg(); S = {}; renderAdmin();
+});
+$('items').addEventListener('click', e => {
+  const k = e.target.dataset.idel; if (k == null) return;
+  cfg.manual = cfg.manual.filter(n => itemKey(n) !== k); saveCfg(); S = {}; renderAdmin();
 });
 $('addForm').addEventListener('submit', e => {
   e.preventDefault();
   const name = $('newName').value.normalize('NFKC').trim(); if (!name) return;
   const k = itemKey(name);
-  if (!manual.some(n => itemKey(n) === k)) manual.push(name);
-  const r = $('newRate').value.replace(/[^\d.]/g, ''); if (r) rates[k] = r;
-  $('newName').value = ''; $('newRate').value = '';
-  compute(); save(); toast(`「${name}」を追加しました`); $('newName').focus();
+  if (!cfg.manual.some(n => itemKey(n) === k)) cfg.manual.push(name);
+  const m = $('newMult').value.replace(/[^\d.]/g, ''); if (m) cfg.mult[k] = m;
+  $('newName').value = ''; $('newMult').value = '';
+  saveCfg(); S = {}; renderAdmin(); toast(`「${name}」を追加しました`); $('newName').focus();
 });
-$('rates').addEventListener('click', e => {
-  const k = e.target.dataset.del; if (k == null) return;
-  manual = manual.filter(n => itemKey(n) !== k);
-  compute(); save();
+$('roles').addEventListener('input', e => {
+  const f = e.target.dataset.rf; if (!f) return;
+  const r = cfg.roles.find(r => r.id === e.target.dataset.id); if (!r) return;
+  r[f] = f === 'fixed' ? e.target.value.replace(/[^\d.]/g, '') : e.target.value;
+  if (f === 'fixed') { const j = document.querySelector(`[data-jp="${CSS.escape(r.id)}"]`); if (j) j.textContent = jp(num(r.fixed)); }
+  saveCfg();
 });
-$('people').addEventListener('change', e => {
-  const r = lastRows[e.target.dataset.p]; if (!r) return;
-  if (e.target.checked) excluded.delete(r.name); else excluded.add(r.name);
-  compute(); save();
+$('roles').addEventListener('click', e => {
+  const id = e.target.dataset.rdel; if (!id) return;
+  cfg.roles = cfg.roles.filter(r => r.id !== id);
+  for (const k in cfg.assign) if (cfg.assign[k] === id) delete cfg.assign[k];
+  saveCfg(); renderAdmin();
 });
-$('copy').addEventListener('click', () => {
-  const lines = lastRows.filter(r => r.on && r.amt > 0).map(r => `・${r.name}：**${money(r.amt)}**（${Object.entries(r.items).map(([k, q]) => `${lastItems.find(i => i.k === k)?.name ?? k}${q}`).join(' / ')}）`);
-  copy(`【納品ボーナス】${period()}\n${lines.join('\n')}\n合計：${money(lastTotal)}`);
+$('addRole').addEventListener('click', () => {
+  cfg.roles.push({ id: 'r' + Date.now().toString(36), name: '', kw: '', fixed: '0' });
+  saveCfg(); renderAdmin();
+  const ins = $('roles').querySelectorAll('input[data-rf="name"]'); ins[ins.length - 1]?.focus();
 });
-$('copyCsv').addEventListener('click', () => {
-  const head = ['名前', ...lastItems.map(i => i.name), '合計数', 'ボーナス($)'];
-  const q = s => /[",\n]/.test(s) ? `"${String(s).replace(/"/g, '""')}"` : s;
-  const body = lastRows.map(r => [r.name, ...lastItems.map(i => r.items[i.k] || 0), r.qty, r.amt].map(q).join(','));
-  copy([head.join(','), ...body].join('\n'));
+const encode = o => 'BONUSCFG1:' + btoa(unescape(encodeURIComponent(JSON.stringify(o))));
+const decode = s => { const m = s.trim().match(/^BONUSCFG1:(.+)$/s); if (!m) throw 0; return JSON.parse(decodeURIComponent(escape(atob(m[1].replace(/\s+/g, ''))))); };
+$('cfgExport').addEventListener('click', () => { const code = encode(cfg); $('cfgCode').value = code; copy(code); });
+$('cfgImport').addEventListener('click', () => {
+  try { const o = decode($('cfgCode').value); if (!o || !Array.isArray(o.roles)) throw 0; cfg = Object.assign(DEFAULT_CFG(), o); saveCfg(); S = {}; renderAdmin(); toast('設定を読み込みました'); }
+  catch { toast('設定コードを読み込めませんでした'); }
 });
-setMode(mode);
+let resetArmed = false;
+$('cfgReset').addEventListener('click', e => {
+  if (!resetArmed) { resetArmed = true; e.target.textContent = 'もう一度押すとリセット'; setTimeout(() => { resetArmed = false; e.target.textContent = '初期設定に戻す'; }, 3000); return; }
+  resetArmed = false; e.target.textContent = '初期設定に戻す';
+  cfg = DEFAULT_CFG(); saveCfg(); S = {}; renderAdmin(); toast('初期設定に戻しました');
+});
+
+saveCfg();
+route();
 }
 </script>
 </body>
