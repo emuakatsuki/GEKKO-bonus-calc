@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>納品ボーナス計算機</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+/* VOICE: 店の給料係が使う、実務的で速い道具。
+   IDEA: 現金封筒に入れる前の支払い明細（ペイロール台帳）。
+   PICTURE: 右側の大きな総支払額と、人ごとの金額バー。
+   COLOUR and TYPE: 深い緑の帯（ドル札）、白い紙面、金額は札の緑、注意は黄。Zen Kaku Gothic New。
+   LAYOUT: 左に貼り付け・期間・単価、右に結果。600px未満で縦積み。 */
+:root{color-scheme:light dark;
+--bg:light-dark(#eef2ee,#0b1411);--panel:light-dark(#ffffff,#13201b);--ink:light-dark(#111a16,#e8efe9);
+--mute:light-dark(#5b6a63,#93a59b);--line:light-dark(#d6dfd8,#24362e);--band:light-dark(#0f3d2e,#08261c);
+--cash:light-dark(#15803d,#4ade80);--cashbg:light-dark(#e3f4e8,#123123);--warn:light-dark(#8a5a00,#ffd166);--warnbg:light-dark(#fff4d1,#2e2610);--field:light-dark(#f7faf8,#0e1915)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Zen Kaku Gothic New","Hiragino Sans","Noto Sans JP",system-ui,sans-serif;overflow-x:clip}
+.top{background:var(--band);color:#eaf6ee;padding:clamp(22px,3vw,40px) max(5vw,16px) clamp(56px,6vw,84px)}
+.top h1{margin:0;font-size:clamp(30px,4.4vw,46px);line-height:1.05;font-weight:900;text-wrap:balance}
+.top p{margin:10px 0 0;color:#b9d6c5;max-width:62ch}
+.wrap{max-width:1240px;margin:calc(-1 * clamp(40px,5vw,64px)) auto 0;padding:0 max(3vw,12px) 48px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:18px;align-items:start}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+.col{display:grid;gap:18px}
+h2{font-size:18px;margin:0 0 4px;font-weight:700}
+.hint{color:var(--mute);font-size:14px;margin:0 0 12px}
+textarea,input,select{font:inherit;font-size:16px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:9px;padding:10px 12px;width:100%}
+textarea{min-height:240px;resize:vertical;line-height:1.45}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:3px solid color-mix(in srgb,var(--cash) 55%,transparent);outline-offset:1px}
+button{font:inherit;font-size:15px;font-weight:700;min-height:44px;padding:0 16px;border-radius:9px;border:1px solid var(--line);background:var(--field);color:var(--ink);cursor:pointer}
+button.pri{background:var(--cash);border-color:var(--cash);color:light-dark(#fff,#062012)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:end}
+.f{display:grid;gap:4px;flex:1 1 150px}.f label{font-size:13px;color:var(--mute)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{font-size:13px;color:var(--mute);font-weight:500;text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:middle}
+.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rate{display:flex;align-items:center;gap:4px}.rate span{color:var(--mute)}.rate input{width:7.5em;text-align:right;padding:8px 10px}
+button.del{min-height:36px;padding:0 10px;font-size:13px;font-weight:500;margin-left:6px}
+td select{padding:8px;font-size:15px;width:auto;max-width:9em}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:transparent}.seg button[aria-pressed=true]{background:var(--cash);color:light-dark(#fff,#062012)}
+.total{background:var(--cashbg);border-radius:12px;padding:18px 18px 14px;margin:14px 0 16px}
+.total small{color:var(--mute);font-size:14px}
+.total b{display:block;font-size:clamp(40px,6vw,64px);line-height:1.05;color:var(--cash);font-variant-numeric:tabular-nums;font-weight:900;letter-spacing:-.01em}
+.people{display:grid;gap:10px}
+.p{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:11px}
+.p.off{opacity:.45}
+.p input{width:22px;height:22px;accent-color:var(--cash)}
+.p .nm{font-weight:700;overflow-wrap:anywhere}
+.p .amt{font-weight:900;font-size:20px;color:var(--cash);font-variant-numeric:tabular-nums;white-space:nowrap}
+.p .bar{grid-column:2/4;height:8px;background:var(--line);border-radius:5px;overflow:hidden}
+.p .bar i{display:block;height:100%;background:var(--cash);border-radius:5px;transition:width .3s}
+.p .det{grid-column:2/4;font-size:13px;color:var(--mute)}
+.warn{background:var(--warnbg);color:var(--warn);border-radius:10px;padding:10px 12px;font-size:14px;margin-top:12px}
+.empty{color:var(--mute);padding:20px 0;text-align:center}
+details summary{cursor:pointer;font-weight:700;min-height:44px;display:flex;align-items:center}
+.log td{font-size:14px}.tag{font-size:12px;padding:2px 7px;border-radius:6px;background:var(--warnbg);color:var(--warn);white-space:nowrap}
+.ok{background:var(--cashbg);color:var(--cash)}
+.scroll{overflow-x:auto}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:10px 18px;border-radius:10px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+.full{grid-column:1/-1}
+@media(max-width:860px){.wrap{grid-template-columns:minmax(0,1fr)}.res{order:-1}}
+@media(max-width:600px){table{font-size:13px}.card{padding:16px}}
+@media(prefers-reduced-motion:reduce){.p .bar i{transition:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>納品ボーナス計算機</h1>
+  <p>Discordの納品報告をそのまま貼り付けて、品目ごとの単価を入れるだけ。納品者ごとの合計数とボーナス額（$）を出します。</p>
+</header>
+
+<main class="wrap">
+  <div class="col">
+    <section class="card">
+      <h2>1. 納品報告を貼り付け</h2>
+      <p class="hint">チャンネルでメッセージを範囲選択してコピー → ここに貼り付け。「名前 — 日時」の行で投稿者を、「牛乳30」のような行で品目と数を読み取ります。全角数字・カタカナ表記もOK。</p>
+      <textarea id="src" spellcheck="false" aria-label="Discordの納品報告"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="clear" type="button">クリア</button>
+        <span class="hint" id="srcInfo" style="margin:0"></span>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>2. 集計期間</h2>
+      <p class="hint">「昨日 10:07」「1:07」のような相対表示は、基準日（コピーした日）から日付を割り出します。期間は空欄なら全件対象。</p>
+      <div class="row">
+        <div class="f"><label for="base">基準日（コピーした日）</label><input type="date" id="base"></div>
+        <div class="f"><label for="from">開始</label><input type="datetime-local" id="from"></div>
+        <div class="f"><label for="to">終了</label><input type="datetime-local" id="to"></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>3. 支払いレート</h2>
+      <p class="hint">1個あたりの単価（$）。表記ゆれ（例：生乳と牛乳）は「まとめ先」で合算できます。入力内容はこのブラウザに保存されます。</p>
+      <div class="scroll"><table id="rates"><thead><tr><th>品目</th><th class="num">合計数</th><th>単価</th><th>まとめ先</th><th class="num">小計</th></tr></thead><tbody></tbody></table></div>
+      <form class="row" id="addForm" style="margin-top:12px">
+        <div class="f"><label for="newName">品目を追加</label><input id="newName" placeholder="例 たまご" autocomplete="off"></div>
+        <div class="f" style="flex:0 1 9em"><label for="newRate">単価（$）</label><input id="newRate" inputmode="decimal" placeholder="0"></div>
+        <button type="submit">追加</button>
+      </form>
+    </section>
+  </div>
+
+  <section class="card res">
+    <div class="row" style="justify-content:space-between">
+      <h2>ボーナス支払い明細</h2>
+      <div class="seg" role="group" aria-label="計算方式">
+        <button type="button" id="mRate" aria-pressed="true">単価方式</button>
+        <button type="button" id="mPool" aria-pressed="false">予算按分</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <div class="f" id="poolBox" hidden><label for="pool">ボーナス予算（$）</label><input id="pool" inputmode="numeric" placeholder="例 1000000"></div>
+      <div class="f"><label for="round">端数処理（切り捨て）</label>
+        <select id="round"><option value="1">$1単位</option><option value="10">$10単位</option><option value="100">$100単位</option><option value="1000">$1,000単位</option></select></div>
+    </div>
+    <p class="hint" id="modeHint" style="margin:8px 0 0"></p>
+    <div class="total"><small>総支払額</small><b id="total">$0</b><small id="totalSub"></small></div>
+    <div class="people" id="people"></div>
+    <div class="row" style="margin-top:14px">
+      <button class="pri" id="copy" type="button">Discord用にコピー</button>
+      <button id="copyCsv" type="button">CSVでコピー</button>
+    </div>
+    <div id="warns"></div>
+  </section>
+
+  <section class="card full">
+    <details id="logBox">
+      <summary>読み取りログ（各メッセージの解釈を確認）</summary>
+      <div class="scroll"><table class="log"><thead><tr><th>日時</th><th>投稿者</th><th>内容</th><th>読み取り結果</th></tr></thead><tbody id="log"></tbody></table></div>
+    </details>
+  </section>
+</main>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+{
+/*PARSER*/
+const kata2hira = s => s.replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+const itemKey = s => kata2hira(s.normalize('NFKC')).toLowerCase().replace(/\s+/g, '');
+const TIME_RE = /\d{1,2}:\d{2}/;
+
+function parseTime(str, base) {
+  str = str.normalize('NFKC').trim();
+  let m = str.match(/(\d{4})\s*[\/\-.年]\s*(\d{1,2})\s*[\/\-.月]\s*(\d{1,2})日?\D*?(\d{1,2}):(\d{2})/);
+  let d;
+  if (m) d = new Date(+m[1], m[2] - 1, +m[3], +m[4], +m[5]);
+  else if ((m = str.match(/(?:^|\D)(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})/))) d = new Date(base.getFullYear(), m[1] - 1, +m[2], +m[3], +m[4]);
+  else if ((m = str.match(/(\d{1,2}):(\d{2})/))) {
+    let off = 0;
+    if (/一昨日|おととい/.test(str)) off = -2; else if (/昨日|yesterday/i.test(str)) off = -1;
+    d = new Date(base.getFullYear(), base.getMonth(), base.getDate() + off, +m[1], +m[2]);
+  } else return null;
+  const h = d.getHours();
+  if (/PM|午後/i.test(str) && h < 12) d.setHours(h + 12);
+  if (/AM|午前/i.test(str) && h === 12) d.setHours(0);
+  return d;
+}
+
+const cleanName = s => s.replace(/^\s*\d+\.\s+/, '').replace(/[\s,，、:：]+$/, '').trim();
+const ITEM_RE = /([^\d\s:：=＝×*,、，。・\/|+()（）\[\]「」-]+?)\s*[:：=×*]?\s*(\d+(?:,\d{3})*)\s*(?:個|本|つ|枚|pcs)?/g;
+
+function parseItems(line) {
+  const t = line.normalize('NFKC').replace(/\s+[xX]\s*(?=\d)/g, ' ').replace(/([^\x00-\x7f])[xX](?=\s*\d)/g, '$1 ');
+  const out = [];
+  let m; ITEM_RE.lastIndex = 0;
+  while ((m = ITEM_RE.exec(t))) {
+    const name = m[1].replace(/^[^\p{L}]+|[^\p{L}]+$/gu, '');
+    if (!name || !/\p{L}/u.test(name)) continue;
+    out.push({ name, key: itemKey(name), qty: +m[2].replace(/,/g, '') });
+  }
+  return out;
+}
+
+function parse(text, base) {
+  const lines = text.split(/\r?\n/);
+  const msgs = [];
+  let cur = null;
+  const push = (author, time, timeRaw) => { cur = { author, time, timeRaw, lines: [] }; msgs.push(cur); };
+  for (const raw of lines) {
+    const line = raw.normalize('NFKC').trim();
+    if (!line) continue;
+    let m = line.match(/^(?:\d+\.\s+)?(.+?)\s+[—–―]\s+(.+)$/);
+    if (m && TIME_RE.test(m[2])) {
+      const t = parseTime(m[2], base);
+      if (t) { push(cleanName(m[1]), t, m[2].trim()); continue; }
+    }
+    m = line.match(/^\[([^\]]*\d{1,2}:\d{2}[^\]]*)\]\s*(.*)$/);
+    if (m) {
+      const t = parseTime(m[1], base);
+      const am = m[2].match(/^(.+?):\s+(.*)$/);
+      if (am && !/^\d/.test(am[1]) && parseItems(am[1]).length === 0) { push(cleanName(am[1]), t, m[1]); if (am[2]) cur.lines.push(am[2]); continue; }
+      if (cur) { push(cur.author, t, m[1]); if (m[2]) cur.lines.push(m[2]); continue; }
+    }
+    if (!cur) push('(投稿者不明)', null, '');
+    cur.lines.push(line);
+  }
+  for (const msg of msgs) {
+    msg.items = []; msg.skipped = [];
+    for (const l of msg.lines) {
+      const its = parseItems(l);
+      if (its.length) msg.items.push(...its); else msg.skipped.push(l);
+    }
+  }
+  return msgs;
+}
+/*END*/
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const money = n => '$' + Math.round(n).toLocaleString('en-US');
+const fmtD = d => d ? `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : '—';
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('bonuscalc:' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
+  set(k, v) { try { localStorage.setItem('bonuscalc:' + k, JSON.stringify(v)); } catch {} }
+};
+
+const SAMPLE = `1. 店長 暁月エム [交錯員],  — 2026/11/22 21:23
+牛乳30
+2. 観察者 F — 2026/11/22 21:23
+牛乳300
+3. 店長 暁月エム [交錯員],  — 昨日 10:07
+牛乳150
+4. アレックス / Alex — 昨日 10:15
+かぼちゃ147
+5. リッカリン/副店長 — 昨日 10:16
+牛乳１８０
+かぼちゃ１４７
+生肉４３７
+6. リッカリン/副店長 — 昨日 11:57
+生肉１３３
+7. アレックス / Alex — 昨日 11:57
+生肉１３３
+8. リッカリン/副店長 — 昨日 15:25
+牛乳９０
+9. きらち/どすけべチーフ — 昨日 15:32
+生乳30
+10. アレックス / Alex — 昨日 15:33
+牛乳６０
+11. たこさん — 1:07
+かぼちゃ４４
+生乳２００
+12. haru🐈 — 1:07
+カボチャ43
+生乳140
+13. リッカリン/副店長 — 10:08
+小麦90
+昨日報告忘れてた🙏🏻
+14. たこさん — 14:17
+生乳２４０
+かぼちゃ２１３`;
+
+let rates = store.get('rates', {});
+let alias = store.get('alias', {});
+let manual = store.get('manual', []);
+let excluded = new Set(store.get('excluded', []));
+let mode = store.get('mode', 'rate');
+const firstRun = store.get('src', null) == null;
+$('src').value = store.get('src', SAMPLE);
+if (firstRun) { rates = { '牛乳': 100, '生乳': 100, 'かぼちゃ': 150, '生肉': 80, '小麦': 60 }; rates = Object.fromEntries(Object.entries(rates).map(([k, v]) => [itemKey(k), v])); }
+$('base').value = store.get('base', '') || (firstRun ? '2026-11-24' : new Date().toLocaleDateString('sv-SE'));
+$('from').value = store.get('from', ''); $('to').value = store.get('to', '');
+$('pool').value = store.get('pool', ''); $('round').value = store.get('round', '1');
+
+let lastRows = [], lastItems = [], lastTotal = 0;
+
+function compute() {
+  const bd = $('base').value ? new Date($('base').value + 'T00:00') : new Date();
+  const msgs = parse($('src').value, bd);
+  const from = $('from').value ? new Date($('from').value) : null, to = $('to').value ? new Date($('to').value) : null;
+  const inRange = m => !m.time ? !(from || to) : (!from || m.time >= from) && (!to || m.time <= to);
+  const display = {}, totals = {}, people = new Map();
+  const resolve = k => { let s = new Set(); while (alias[k] && !s.has(k)) { s.add(k); k = alias[k]; } return k; };
+  for (const n of manual) display[itemKey(n)] = n;
+  for (const m of msgs) for (const it of m.items) if (!display[it.key]) display[it.key] = it.name;
+  let outCount = 0;
+  for (const m of msgs) {
+    m.in = inRange(m);
+    if (!m.in) { outCount++; continue; }
+    for (const it of m.items) {
+      const k = resolve(it.key);
+      totals[it.key] = (totals[it.key] || 0) + it.qty;
+      if (!people.has(m.author)) people.set(m.author, {});
+      const p = people.get(m.author); p[k] = (p[k] || 0) + it.qty;
+    }
+  }
+  const keys = Object.keys(display);
+  const mergedTotals = {};
+  for (const k of keys) { const r = resolve(k); mergedTotals[r] = (mergedTotals[r] || 0) + (totals[k] || 0); }
+  const rateOf = k => +rates[k] || 0;
+  const step = +$('round').value || 1, fl = n => Math.floor(n / step) * step;
+
+  let rows = [...people].map(([name, items]) => ({ name, items, on: !excluded.has(name),
+    weight: Object.entries(items).reduce((s, [k, q]) => s + q * rateOf(k), 0),
+    qty: Object.values(items).reduce((a, b) => a + b, 0) }));
+  const pool = +String($('pool').value).replace(/[^\d.]/g, '') || 0;
+  if (mode === 'pool') {
+    const useQty = rows.every(r => r.weight === 0);
+    const W = rows.filter(r => r.on).reduce((s, r) => s + (useQty ? r.qty : r.weight), 0);
+    rows.forEach(r => r.amt = r.on && W ? fl(pool * (useQty ? r.qty : r.weight) / W) : 0);
+    $('modeHint').textContent = useQty ? '単価が未設定のため、納品数の比率で予算を分けています。' : '「数 × 単価」を重みとして、予算を比率で分けています。';
+  } else {
+    rows.forEach(r => r.amt = r.on ? fl(r.weight) : 0);
+    $('modeHint').textContent = '各自の「納品数 × 単価」の合計を支払います。';
+  }
+  rows.sort((a, b) => b.amt - a.amt || b.qty - a.qty);
+  const total = rows.reduce((s, r) => s + r.amt, 0);
+  const max = Math.max(1, ...rows.map(r => r.amt));
+  lastRows = rows; lastTotal = total;
+
+  // rate table
+  const roots = keys.filter(k => resolve(k) === k);
+  lastItems = roots.map(k => ({ k, name: display[k] }));
+  $('rates').tBodies[0].innerHTML = keys.length ? keys.map(k => {
+    const merged = resolve(k) !== k;
+    const opts = ['<option value="">そのまま</option>'].concat(keys.filter(o => o !== k && resolve(o) !== k).map(o => `<option value="${esc(o)}"${alias[k] === o ? ' selected' : ''}>→ ${esc(display[o])}</option>`)).join('');
+    const isManual = manual.some(n => itemKey(n) === k);
+    return `<tr><td><b>${esc(display[k])}</b>${isManual ? `<button type="button" class="del" data-del="${esc(k)}" aria-label="${esc(display[k])}を一覧から外す">外す</button>` : ''}</td><td class="num">${(totals[k] || 0).toLocaleString()}${merged ? '' : mergedTotals[k] !== (totals[k] || 0) ? `<br><small style="color:var(--mute)">合算 ${mergedTotals[k].toLocaleString()}</small>` : ''}</td>
+      <td>${merged ? `<span class="hint">${esc(display[resolve(k)])}の単価</span>` : `<div class="rate"><span>$</span><input data-rate="${esc(k)}" inputmode="decimal" value="${esc(rates[k] ?? '')}" placeholder="0" aria-label="${esc(display[k])}の単価"></div>`}</td>
+      <td><select data-alias="${esc(k)}" aria-label="${esc(display[k])}のまとめ先">${opts}</select></td>
+      <td class="num">${merged ? '' : money((mergedTotals[k] || 0) * rateOf(k))}</td></tr>`;
+  }).join('') : '<tr><td colspan="5" class="empty">品目がまだ読み取れていません</td></tr>';
+
+  // people
+  $('people').innerHTML = rows.length ? rows.map((r, i) => `<div class="p${r.on ? '' : ' off'}">
+      <input type="checkbox" data-p="${i}" ${r.on ? 'checked' : ''} aria-label="${esc(r.name)}を支払い対象にする">
+      <span class="nm">${esc(r.name)}</span><span class="amt">${money(r.amt)}</span>
+      <span class="bar"><i style="width:${(r.amt / max * 100).toFixed(1)}%"></i></span>
+      <span class="det">${Object.entries(r.items).map(([k, q]) => `${esc(display[k])} ${q.toLocaleString()}`).join(' ・ ')}　計${r.qty.toLocaleString()}個</span></div>`).join('')
+    : '<div class="empty">納品報告を貼り付けると、ここに支払額が出ます。</div>';
+  $('total').textContent = money(total);
+  const paid = rows.filter(r => r.on && r.amt > 0).length;
+  $('totalSub').textContent = `${paid}人に支払い` + (mode === 'pool' && pool ? `／予算 ${money(pool)}（残り ${money(pool - total)}）` : '');
+
+  // warnings + log
+  const unrated = roots.filter(k => !rateOf(k) && mergedTotals[k]);
+  const skippedNum = msgs.filter(m => m.in).flatMap(m => m.skipped.filter(l => /\d/.test(l)).map(l => `${m.author}：「${l}」`));
+  const w = [];
+  if (mode === 'rate' && unrated.length) w.push(`単価が未入力の品目：${unrated.map(k => esc(display[k])).join('、')}`);
+  if (skippedNum.length) w.push(`数字を含むのに品目として読めなかった行：${skippedNum.map(esc).join(' / ')}`);
+  if (outCount) w.push(`期間外のため除外したメッセージ：${outCount}件`);
+  $('warns').innerHTML = w.map(t => `<div class="warn">${t}</div>`).join('');
+  $('srcInfo').textContent = `${msgs.length}件のメッセージ、${msgs.reduce((s, m) => s + m.items.length, 0)}件の納品を読み取り`;
+  $('log').innerHTML = msgs.map(m => `<tr><td class="num">${fmtD(m.time)}</td><td>${esc(m.author)}</td><td>${m.lines.map(esc).join('<br>')}</td>
+    <td>${!m.in ? '<span class="tag">期間外</span> ' : ''}${m.items.map(it => `<span class="tag ok">${esc(it.name)} ${it.qty}</span>`).join(' ')}${m.skipped.length ? ` <span class="tag">無視 ${m.skipped.length}行</span>` : ''}</td></tr>`).join('');
+}
+
+function save() {
+  store.set('src', $('src').value); store.set('rates', rates); store.set('alias', alias); store.set('manual', manual);
+  store.set('excluded', [...excluded]); store.set('mode', mode);
+  for (const k of ['base', 'from', 'to', 'pool', 'round']) store.set(k, $(k).value);
+}
+let t;
+const update = () => { clearTimeout(t); t = setTimeout(() => { compute(); save(); }, 120); };
+
+function setMode(m) {
+  mode = m; $('mRate').setAttribute('aria-pressed', m === 'rate'); $('mPool').setAttribute('aria-pressed', m === 'pool');
+  $('poolBox').hidden = m !== 'pool'; compute(); save();
+}
+const toast = msg => { const el = $('toast'); el.textContent = msg; el.classList.add('on'); setTimeout(() => el.classList.remove('on'), 1600); };
+async function copy(text) {
+  try { await navigator.clipboard.writeText(text); toast('コピーしました'); }
+  catch { const ta = document.createElement('textarea'); ta.value = text; document.body.append(ta); ta.select();
+    try { document.execCommand('copy'); toast('コピーしました'); } catch { toast('コピーできませんでした'); } ta.remove(); }
+}
+const period = () => ($('from').value || $('to').value) ? `${$('from').value.replace('T', ' ') || '最初'} 〜 ${$('to').value.replace('T', ' ') || '最後'}` : '全期間';
+
+$('src').addEventListener('input', update);
+for (const id of ['base', 'from', 'to', 'pool', 'round']) $(id).addEventListener('input', update);
+$('clear').addEventListener('click', () => { $('src').value = ''; compute(); save(); $('src').focus(); });
+$('mRate').addEventListener('click', () => setMode('rate'));
+$('mPool').addEventListener('click', () => setMode('pool'));
+$('rates').addEventListener('input', e => {
+  const k = e.target.dataset.rate; if (k == null) return;
+  rates[k] = e.target.value.replace(/[^\d.]/g, ''); clearTimeout(t);
+  t = setTimeout(() => { const id = e.target.dataset.rate; compute(); save(); const el = document.querySelector(`[data-rate="${CSS.escape(id)}"]`); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 400);
+});
+$('rates').addEventListener('change', e => {
+  const k = e.target.dataset.alias; if (k == null) return;
+  if (e.target.value) alias[k] = e.target.value; else delete alias[k];
+  compute(); save();
+});
+$('addForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const name = $('newName').value.normalize('NFKC').trim(); if (!name) return;
+  const k = itemKey(name);
+  if (!manual.some(n => itemKey(n) === k)) manual.push(name);
+  const r = $('newRate').value.replace(/[^\d.]/g, ''); if (r) rates[k] = r;
+  $('newName').value = ''; $('newRate').value = '';
+  compute(); save(); toast(`「${name}」を追加しました`); $('newName').focus();
+});
+$('rates').addEventListener('click', e => {
+  const k = e.target.dataset.del; if (k == null) return;
+  manual = manual.filter(n => itemKey(n) !== k);
+  compute(); save();
+});
+$('people').addEventListener('change', e => {
+  const r = lastRows[e.target.dataset.p]; if (!r) return;
+  if (e.target.checked) excluded.delete(r.name); else excluded.add(r.name);
+  compute(); save();
+});
+$('copy').addEventListener('click', () => {
+  const lines = lastRows.filter(r => r.on && r.amt > 0).map(r => `・${r.name}：**${money(r.amt)}**（${Object.entries(r.items).map(([k, q]) => `${lastItems.find(i => i.k === k)?.name ?? k}${q}`).join(' / ')}）`);
+  copy(`【納品ボーナス】${period()}\n${lines.join('\n')}\n合計：${money(lastTotal)}`);
+});
+$('copyCsv').addEventListener('click', () => {
+  const head = ['名前', ...lastItems.map(i => i.name), '合計数', 'ボーナス($)'];
+  const q = s => /[",\n]/.test(s) ? `"${String(s).replace(/"/g, '""')}"` : s;
+  const body = lastRows.map(r => [r.name, ...lastItems.map(i => r.items[i.k] || 0), r.qty, r.amt].map(q).join(','));
+  copy([head.join(','), ...body].join('\n'));
+});
+setMode(mode);
+}
+</script>
+</body>
+</html>
